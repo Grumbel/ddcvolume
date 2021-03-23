@@ -127,17 +127,6 @@ class DDCVolume:
         return volume
 
 
-def send_notify(volume: int):
-    if volume < 33:
-        icon = "audio-volume-low-symbolic"
-    elif volume < 66:
-        icon = "audio-volume-medium-symbolic"
-    else:
-        icon = "audio-volume-high-symbolic"
-
-    subprocess.call(["notify-send", f"--hint=int:value:{volume}", "--hint=string:x-canonical-private-synchronous:anything", "-i", icon, f"volume {volume}%"])
-
-
 def find_i2c_bus(name: str) -> int:
     devices_path = "/sys/bus/i2c/devices"
     for entry in os.scandir(devices_path):
@@ -149,34 +138,6 @@ def find_i2c_bus(name: str) -> int:
                 return int(m.group(1))
     else:
         raise Exception("failed to find i2c device: {}".format(name))
-
-
-def parse_volume_str(volume_str: str) -> int:
-    if volume_str[0] == "+" or volume_str[0] == "-":
-        return relative()
-    else:
-        return int(volume_str)
-
-
-def ddc_volume_set(bus: int, volume_str: str) -> None:
-
-    with open(os.path.join(ddcvolume_dir, "lock"), "w") as fout:
-        fcntl.flock(fout, fcntl.lock_ex)
-        volume = parse_volume_str(volume_str)
-
-    subprocess.check_call(["sudo", "ddcutil", "--noverify", "--bus", str(bus), "setvcp", "62", "--", volume])
-
-
-def ddc_volume_get(bus: int) -> int:
-    with open(os.path.join(ddcvolume_dir, "lock"), "w") as fout:
-        fcntl.flock(fout, fcntl.lock_ex)
-        volume = parse_volume_str(volume_str)
-
-        with open(os.path.join(ddcvolume_dir, "volume"), "r") as fin:
-            volume = int(fin.read())
-
-
-    return volume
 
 
 def parse_args(args: List[str]) -> argparse.Namespace:
