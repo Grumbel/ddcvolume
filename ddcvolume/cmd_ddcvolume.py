@@ -68,16 +68,19 @@ class DDCVolume:
             return self._get()
 
     def send_notify(self, volume: int):
-        with open(os.path.join(self.ddcvolume_dir, "notification_id"), "r+") as fl:
+        with open(os.path.join(self.ddcvolume_dir, "notification_id"), "a+") as fl:
             fcntl.flock(fl, fcntl.LOCK_EX)
 
-            notify_id_str = fl.read()
-            print(notify_id_str)
             fl.seek(0)
+            notify_id_str = fl.read()
+
             if not notify_id_str:
                 notify_id = 0
             else:
-                notify_id = int(notify_id_str)
+                try:
+                    notify_id = int(notify_id_str)
+                except ValueError:
+                    notify_id = 0
 
             if volume < 33:
                 icon = "audio-volume-low-symbolic"
@@ -103,6 +106,8 @@ class DDCVolume:
                     dbus.String("value"): dbus.Int32(volume, variant_level=1),
                 }),
                 dbus.Int32(2000))
+
+            fl.truncate()
             fl.write(str(notify_id) + "\n")
 
     def _update_volume(self, volume: int, volume_str: str) -> str:
