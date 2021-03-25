@@ -50,8 +50,25 @@ class DDCVolume:
         except:
             raise
 
-    def commit(self, volume: int) -> None:
-        subprocess.check_call(["sudo", "ddcutil", "--noverify", "--bus", str(self.bus), "setvcp", "62", "--", str(volume)])
+    def commit(self) -> None:
+        with open(os.path.join(self.ddcvolume_dir, "commit"), "a+") as fl:
+            fcntl.flock(fl, fcntl.LOCK_EX)
+
+            fl.seek(0)
+            volume_str = fl.read()
+            try:
+                current_volume = int(volume_str)
+            except ValueError:
+                current_volume = None
+
+            volume = self.get()
+
+            if volume != current_volume:
+                subprocess.check_call(["sudo", "ddcutil", "--noverify", "--bus", str(self.bus), "setvcp", "62", "--", str(volume)])
+
+                fl.truncate(0)
+                fl.seek(0)
+                fl.write(str(volume))
 
     def set(self, volume_str: str) -> None:
         with open(os.path.join(self.ddcvolume_dir, "lock"), "w") as fl:
@@ -107,7 +124,7 @@ class DDCVolume:
                 }),
                 dbus.Int32(2000))
 
-            fl.truncate()
+            fl.truncate(0)
             fl.write(str(notify_id) + "\n")
 
     def _update_volume(self, volume: int, volume_str: str) -> str:
@@ -162,7 +179,7 @@ def main():
         volume_str = args.set
         volume = ddcvolume.set(volume_str)
         ddcvolume.send_notify(volume)
-        ddcvolume.commit(volume)
+        ddcvolume.commit()
 
 
 if __name__ == "__main__":
