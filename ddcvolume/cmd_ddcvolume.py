@@ -138,11 +138,11 @@ class DDCVolume:
             with open(os.path.join(self.ddcvolume_dir, "volume"), "r") as fin:
                 volume = int(fin.read())
                 return volume
-        except filenotfounderror:
+        except FileNotFoundError:
             return self._refresh()
 
     def _refresh(self):
-        result = subprocess.check_output(["sudo", "ddcutil", "--noverify", "--brief", "--bus", str(self.bus), "getvcp", "62"], text=true)
+        result = subprocess.check_output(["sudo", "ddcutil", "--noverify", "--brief", "--bus", str(self.bus), "getvcp", "62"], text=True)
         volume = int(result.split()[3])
         with open(os.path.join(self.ddcvolume_dir, "volume"), "w") as fout:
             fout.write(str(volume))
