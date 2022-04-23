@@ -33,13 +33,15 @@ import dbus
 # save new volume to cache file
 # apply ddcvolume as last step
 
+# FIXME: Could rewrite this to use sqlite for easier locking and robustness.
 
 I2C_RE = re.compile(r"i2c-(\d+)", re.ASCII)
 
 
 class DDCVolume:
 
-    def __init__(self, bus: int) -> None:
+    def __init__(self, ddcutil_exe: str, bus: int) -> None:
+        self.ddcutil_exe = ddcutil_exe
         self.bus = bus
 
         try:
@@ -64,7 +66,7 @@ class DDCVolume:
             volume = self.get()
 
             if volume != current_volume:
-                subprocess.check_call(["sudo", "ddcutil", "--noverify", "--bus", str(self.bus), "setvcp", "62", "--", str(volume)])
+                subprocess.check_call(["sudo", self.ddcutil_exe, "--noverify", "--bus", str(self.bus), "setvcp", "62", "--", str(volume)])
 
                 fl.truncate(0)
                 fl.seek(0)
@@ -142,7 +144,7 @@ class DDCVolume:
             return self._refresh()
 
     def _refresh(self):
-        result = subprocess.check_output(["sudo", "ddcutil", "--noverify", "--brief", "--bus", str(self.bus), "getvcp", "62"], text=True)
+        result = subprocess.check_output(["sudo", self.ddcutil_exe, "--noverify", "--brief", "--bus", str(self.bus), "getvcp", "62"], text=True)
         volume = int(result.split()[3])
         with open(os.path.join(self.ddcvolume_dir, "volume"), "w") as fout:
             fout.write(str(volume))
@@ -166,13 +168,15 @@ def parse_args(args: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Monitor Volume Control over DDC")
     parser.add_argument("--set", metavar="volume", type=str, help="set volume to volume")
     parser.add_argument("--get", action='store_true', help="retrieve the current volume")
+    parser.add_argument("--ddcutil", metavar="PATH", type=str, default='ddcutil', help="ddcutil executable to use")
     return parser.parse_args(args)
 
 
 def main():
     args = parse_args(sys.argv[1:])
     bus = find_i2c_bus("Radeon i2c bit bus 0x92")
-    ddcvolume = DDCVolume(bus)
+    ddcutil_exe = args.ddcutil
+    ddcvolume = DDCVolume(ddcutil_exe, bus)
     if args.get:
         print(ddcvolume.get())
     elif args.set is not None:
