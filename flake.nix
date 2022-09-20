@@ -10,8 +10,10 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-      in rec {
-        packages = flake-utils.lib.flattenTree rec {
+      in {
+        packages = rec {
+          default = ddcvolume;
+
           ddcvolume = pkgs.python3Packages.buildPythonPackage rec {
             name = "ddcvolume";
             src = ./.;
@@ -29,6 +31,6 @@
             ];
           };
         };
-        defaultPackage = packages.ddcvolume;
-      });
+      }
+    );
 }
